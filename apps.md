@@ -1,4 +1,97 @@
 
+### Apps and Models Outline
+
+1. **Accounts**
+   - **CustomUser**
+   - **UserProfile**
+   - **OrganisationProfile**
+   - **CompanyProfile**
+   - **ClubProfile**
+   - **LeagueProfile**
+   - **PlayerProfile**
+
+2. **Authentication**
+   - **UserToken**
+
+3. **Clubs**
+   - **Club**
+   - **ClubProfile**
+   - **Player**
+
+4. **Leagues**
+   - **League**
+   - **LeagueProfile**
+   - **Match**
+
+5. **Polls**
+   - **Poll**
+   - **PollChoice**
+   - **PollVote**
+
+6. **Forums**
+   - **Forum**
+   - **Thread**
+   - **Post**
+
+7. **Posts**
+   - **Post**
+   - **Comment**
+
+8. **Videos**
+   - **Video**
+   - **Comment**
+
+9. **Matches**
+   - **Match**
+   - **MatchEvent**
+
+10. **Shop**
+    - **Product**
+    - **Order**
+
+11. **Search**
+    - **SearchQuery**
+    - **SearchResult**
+
+### Relationships Outline
+
+- **Accounts App**
+  - `CustomUser` relates to `UserProfile`, `OrganisationProfile`, `CompanyProfile`, `ClubProfile`, `LeagueProfile`, `PlayerProfile`.
+
+- **Authentication App**
+  - Provides authentication tokens for `CustomUser`.
+
+- **Clubs App**
+  - `Club` has `ClubProfile` and relates to `Player`.
+
+- **Leagues App**
+  - `League` has `LeagueProfile` and relates to `Match`.
+
+- **Polls App**
+  - `Poll` has `PollChoice` and `PollVote`.
+
+- **Forums App**
+  - `Forum` has `Thread` and `Post`.
+
+- **Posts App**
+  - `Post` has `Comment`.
+
+- **Videos App**
+  - `Video` has `Comment`.
+
+- **Matches App**
+  - `Match` has `MatchEvent`.
+
+- **Shop App**
+  - `Product` has `Order`.
+
+- **Search App**
+  - Tracks `SearchQuery` and `SearchResult`.
+
+
+
+
+
 ### Accounts App
 
 #### Models
