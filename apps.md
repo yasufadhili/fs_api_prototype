@@ -1,4 +1,107 @@
 
+### Accounts App
+
+#### Models
+- **CustomUser**: Base user model with `username`, `password`, `user_type` (choices: 'user', 'organisation', 'company', 'club', 'league', 'player').
+- **UserProfile**: One-to-One relationship with `CustomUser` for regular users.
+- **OrganisationProfile**: One-to-One relationship with `CustomUser` for organisations.
+- **CompanyProfile**: One-to-One relationship with `CustomUser` for companies.
+
+### Authentication App
+
+#### Functionality
+- **Registration**: Registers `CustomUser` and associated profile based on `user_type`.
+- **Login**: Authenticates user and provides access tokens.
+- **Password Management**: Handles password reset and change functionalities.
+
+### Leagues App
+
+#### Models
+- **League**: Fields: `name`, `country`, `number_of_teams`, etc.
+- **LeagueProfile**: One-to-One relationship with `CustomUser` for league-specific information.
+- **Match**: Fields: `date`, `location`, `home_team`, `away_team`, `score`, etc.
+  - Foreign Keys: `home_team`, `away_team` (links to `Club`).
+
+#### Relationships
+- `League` has a One-to-Many relationship with `Club` from the Clubs app.
+- `Match` links `home_team` and `away_team` to `Club`.
+
+### Clubs App
+
+#### Models
+- **Club**: Fields: `name`, `league`, `founded`, `stadium`, etc.
+- **ClubProfile**: One-to-One relationship with `CustomUser` for club-specific information.
+
+#### Relationships
+- `Club` has a Foreign Key to `League` from the Leagues app.
+- `Club` has a One-to-Many relationship with `Player` from the Players app.
+
+### Players App
+
+#### Models
+- **Player**: Fields: `name`, `position`, `date_of_birth`, `nationality`, `club`, etc.
+- **PlayerProfile**: One-to-One relationship with `CustomUser` for player-specific information.
+
+#### Relationships
+- `Player` has a Foreign Key to `Club` from the Clubs app.
+
+### Summary of Model Relationships
+
+1. **Accounts App**
+   - `CustomUser`: Base model with `user_type` to distinguish user profiles.
+   - `UserProfile`, `OrganisationProfile`, `CompanyProfile`: Extend `CustomUser` via one-to-one relationships for specific user types.
+
+2. **Authentication App**
+   - Manages user registration, login, and password management functionalities.
+
+3. **Leagues App**
+   - `League`: Represents a football league.
+   - `LeagueProfile`: Extends `CustomUser` for league-specific information.
+   - `Match`: Represents a match within a league, links `home_team` and `away_team` to `Club` from the Clubs app.
+
+4. **Clubs App**
+   - `Club`: Represents a football club, links to `League` from the Leagues app.
+   - `ClubProfile`: Extends `CustomUser` for club-specific information.
+
+5. **Players App**
+   - `Player`: Represents a football player, links to `Club` from the Clubs app.
+   - `PlayerProfile`: Extends `CustomUser` for player-specific information.
+
+### Project Structure Overview
+
+- `accounts/`
+  - models.py: Define `CustomUser`, `UserProfile`, `OrganisationProfile`, `CompanyProfile`.
+  - views.py: Handle user profile views.
+  - serializers.py: Serialize user data.
+  - urls.py: Define URLs for profile management.
+
+- `authentication/`
+  - views.py: Handle registration, login, and password management.
+  - serializers.py: Serialize authentication data.
+  - urls.py: Define URLs for authentication.
+
+- `leagues/`
+  - models.py: Define `League`, `LeagueProfile`, `Match`.
+  - views.py: Handle league and match views.
+  - serializers.py: Serialize league and match data.
+  - urls.py: Define URLs for league and match management.
+
+- `clubs/`
+  - models.py: Define `Club`, `ClubProfile`.
+  - views.py: Handle club views.
+  - serializers.py: Serialize club data.
+  - urls.py: Define URLs for club management.
+
+- `players/`
+  - models.py: Define `Player`, `PlayerProfile`.
+  - views.py: Handle player views.
+  - serializers.py: Serialize player data.
+  - urls.py: Define URLs for player management.
+
+
+
+
+
 1. **Accounts**: Handle user profiles and management.
 2. **Authentication**: Manage user registration, login, and authentication.
 3. **Polls**: Manage user-created polls related to football topics.
