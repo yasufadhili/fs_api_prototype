@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'django_countries',
     'rest_framework',
     'knox',
+
+    'users.apps.UsersConfig'
     
 ]
 
