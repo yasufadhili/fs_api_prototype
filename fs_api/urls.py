@@ -22,6 +22,7 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path("users/", include("accounts.urls")),
 ]
 
 admin.site.site_header = "Football Social Admin"
