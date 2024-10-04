@@ -43,7 +43,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'knox',
 
-    'users.apps.UsersConfig'
+    'users.apps.UsersConfig',
+    'leagues.apps.LeaguesConfig',
+    'clubs.apps.ClubsConfig'
     
 ]
 
