@@ -1,6 +1,7 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import BasePermission
 from django.shortcuts import get_object_or_404
 from .models import (
     User, UserRelationship, RegularProfile, FootballerProfile,
@@ -13,10 +14,28 @@ from .serializers import (
     ProfileStatusSerializer
 )
 
+class IsAdminOrSelf(BasePermission):
+    """
+    Custom permission to allow only admin users to view all users,
+    and allow non-admin users to view their own user information.
+    """
+
+    def has_permission(self, request, view):
+        # Admin users can perform any action
+        if request.user.is_staff:
+            return True
+        # Non-admin users can only perform actions on their own user object
+        elif view.action in ['retrieve', 'update', 'partial_update']:
+            user_id = view.kwargs.get('pk')
+            if user_id is not None:
+                return int(user_id) == request.user.id
+        return False
+
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserDetailSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAdminOrSelf]
 
     def get_serializer_class(self):
         if self.action in ['list', 'create']:
