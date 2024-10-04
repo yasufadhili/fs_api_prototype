@@ -2,13 +2,11 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import RegexValidator, EmailValidator
-from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.utils.translation import get_language
 import shortuuid
 from django_countries.fields import CountryField
 from accounts.managers import CustomUserManager
-
 
 USERNAME_VALIDATOR = RegexValidator(
     regex=r'^[a-zA-Z0-9_.-]+$',
@@ -20,12 +18,25 @@ PHONE_NUMBER_VALIDATOR = RegexValidator(
     message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
 )
 
-class User(AbstractUser):
-    """ Custom User model"""
+LANGUAGES = (
+    ('en', 'English'),
+    ('sw', 'Swahili'),
+    ('ar', 'Arabic'),
+    ('pt', 'Portuguese'),
+    ('it', 'Italian'),
+    ('nl', 'Dutch'),
+    ('ru', 'Russian'),
+    ('fr', 'French'),
+    ('de', 'German'),
+    ('es', 'Spanish'),
+)
+
+class Account(AbstractUser):
+    """Custom Account model"""
     REGULAR = 'REGULAR'
-    FOOTBALLER = 'footballer'
-    MANAGER = 'manager'
-    ORGANISATION = 'organisation'
+    FOOTBALLER = 'FOOTBALLER'
+    MANAGER = 'MANAGER'
+    ORGANISATION = 'ORGANISATION'
     
     ACCOUNT_TYPES = (
         (REGULAR, 'Regular Account'),
@@ -39,7 +50,7 @@ class User(AbstractUser):
         primary_key=True,
         max_length=255,
         default=shortuuid.uuid,
-        help_text=_("User ID"),
+        help_text=_("Account ID"),
         db_index=True
     )
     email = models.EmailField(
@@ -75,10 +86,11 @@ class User(AbstractUser):
     )
     is_moderator = models.BooleanField(default=False)
     is_developer = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False)
 
-    user_relationships = models.ManyToManyField(
+    account_relationships = models.ManyToManyField(
         "self",
-        through="UserRelationship",
+        through="AccountRelationship",
         symmetrical=False,
         related_name="related_to",
     )
@@ -97,15 +109,15 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
-class UserRelationship(models.Model):
-    """ Model to define follower-following relationships between users """
+class AccountRelationship(models.Model):
+    """Model to define follower-following relationships between accounts"""
     follower = models.ForeignKey(
-        get_user_model(),
+        Account,
         related_name="following",
         on_delete=models.CASCADE
     )
     following = models.ForeignKey(
-        get_user_model(),
+        Account,
         related_name="followers",
         on_delete=models.CASCADE
     )
@@ -118,48 +130,22 @@ class UserRelationship(models.Model):
     def __str__(self):
         return f"{self.follower} follows {self.following}"
 
-LANGUAGES = (
-    ('en', 'English'),
-    ('sw', 'Swahili'),
-    ('ar', 'Arabic'),
-    ('pt', 'Portuguese'),
-    ('it', 'Italian'),
-    ('nl', 'Dutch'),
-    ('ru', 'Russian'),
-    ('fr', 'French'),
-    ('de', 'German'),
-    ('es', 'Spanish'),
-)
-
-class Profile(models.Model):
-    """ User Profile model with additional fields for different account types """
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+class BaseProfile(models.Model):
+    """Base Profile model with common fields"""
+    account = models.OneToOneField(Account, on_delete=models.CASCADE)
     country = CountryField(blank=True, null=True)
     bio = models.TextField(blank=True, null=True, max_length=1000)
     avatar = models.URLField(blank=True, null=True)
-    status = models.ForeignKey("ProfileStatus", blank=True, null=True, on_delete=models.CASCADE, related_name="profile_status")
+    status = models.ForeignKey("ProfileStatus", blank=True, null=True, on_delete=models.CASCADE, related_name="%(class)s_status")
     preferred_language = models.CharField(choices=LANGUAGES, default='en', max_length=100, blank=True)
     time_zone = models.CharField(max_length=100, blank=True, verbose_name="Time zone")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    # Common fields for all account types
     website = models.URLField(blank=True, null=True)
     social_media_links = models.JSONField(blank=True, null=True)
 
-    # Fields for Footballer accounts
-    position = models.CharField(max_length=100, blank=True, null=True)
-    club = models.CharField(max_length=255, blank=True, null=True)
-    national_team = models.CharField(max_length=255, blank=True, null=True)
-
-    # Fields for Manager accounts
-    current_team = models.CharField(max_length=255, blank=True, null=True)
-    coaching_style = models.CharField(max_length=255, blank=True, null=True)
-
-    # Fields for Organisation accounts
-    organisation_name = models.CharField(max_length=255, blank=True, null=True)
-    organisation_type = models.CharField(max_length=255, blank=True, null=True)
-    verified = models.BooleanField(default=False)
+    class Meta:
+        abstract = True
 
     def get_preferred_language(self):
         return self.preferred_language or get_language()
@@ -168,21 +154,34 @@ class Profile(models.Model):
         return self.time_zone or settings.TIME_ZONE
 
     def followers_count(self):
-        return self.user.followers.count()
+        return self.account.followers.count()
 
     def following_count(self):
-        return self.user.following.count()
+        return self.account.following.count()
 
-    class Meta:
-        verbose_name = _("User Profile")
-        verbose_name_plural = _("User Profiles")
+class RegularProfile(BaseProfile):
+    """Profile for regular accounts"""
+    pass
 
-    def __str__(self):
-        return self.user.get_username()
+class FootballerProfile(BaseProfile):
+    """Profile for footballer accounts"""
+    position = models.CharField(max_length=100, blank=True, null=True)
+    club = models.CharField(max_length=255, blank=True, null=True)
+    national_team = models.CharField(max_length=255, blank=True, null=True)
+
+class ManagerProfile(BaseProfile):
+    """Profile for manager accounts"""
+    current_team = models.CharField(max_length=255, blank=True, null=True)
+    coaching_style = models.CharField(max_length=255, blank=True, null=True)
+
+class OrganisationProfile(BaseProfile):
+    """Profile for organisation accounts"""
+    organisation_name = models.CharField(max_length=255, blank=True, null=True)
+    organisation_type = models.CharField(max_length=255, blank=True, null=True)
 
 class ProfileStatus(models.Model):
-    """ Statuses for user profiles """
-    profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
+    """Statuses for user profiles"""
+    profile = models.ForeignKey(BaseProfile, on_delete=models.CASCADE)
     status = models.CharField(choices=(
         ('active', 'Active'),
         ('suspended', 'Suspended'),
@@ -199,3 +198,4 @@ class ProfileStatus(models.Model):
 
     def __str__(self):
         return self.status
+
