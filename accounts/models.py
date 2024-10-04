@@ -7,7 +7,7 @@ from django.conf import settings
 from django.utils.translation import get_language
 import shortuuid
 from django_countries.fields import CountryField
-from users.managers import CustomUserManager
+from accounts.managers import CustomUserManager
 
 
 USERNAME_VALIDATOR = RegexValidator(
