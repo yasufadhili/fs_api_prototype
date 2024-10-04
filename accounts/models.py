@@ -31,17 +31,17 @@ LANGUAGES = (
     ('es', 'Spanish'),
 )
 
-class Account(AbstractUser):
-    """Custom Account model"""
+class User(AbstractUser):
+    """Custom User model"""
     REGULAR = 'REGULAR'
     FOOTBALLER = 'FOOTBALLER'
     MANAGER = 'MANAGER'
     ORGANISATION = 'ORGANISATION'
     
-    ACCOUNT_TYPES = (
-        (REGULAR, 'Regular Account'),
-        (FOOTBALLER, 'Footballer Account'),
-        (MANAGER, 'Manager Account'),
+    USER_TYPES = (
+        (REGULAR, 'Regular User'),
+        (FOOTBALLER, 'Footballer User'),
+        (MANAGER, 'Manager User'),
         (ORGANISATION, 'Organisation (Broadcaster/News Agency)'),
     )
 
@@ -50,7 +50,7 @@ class Account(AbstractUser):
         primary_key=True,
         max_length=255,
         default=shortuuid.uuid,
-        help_text=_("Account ID"),
+        help_text=_("User ID"),
         db_index=True
     )
     email = models.EmailField(
@@ -78,19 +78,19 @@ class Account(AbstractUser):
         max_length=100, blank=True, null=True,
         verbose_name=_("Last name")
     )
-    account_type = models.CharField(
+    user_type = models.CharField(
         max_length=50,
-        choices=ACCOUNT_TYPES,
+        choices=USER_TYPES,
         default=REGULAR,
-        verbose_name=_("Account Type")
+        verbose_name=_("User Type")
     )
     is_moderator = models.BooleanField(default=False)
     is_developer = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
 
-    account_relationships = models.ManyToManyField(
+    user_relationships = models.ManyToManyField(
         "self",
-        through="AccountRelationship",
+        through="UserRelationship",
         symmetrical=False,
         related_name="related_to",
     )
@@ -109,15 +109,15 @@ class Account(AbstractUser):
     def __str__(self):
         return self.username
 
-class AccountRelationship(models.Model):
-    """Model to define follower-following relationships between accounts"""
+class UserRelationship(models.Model):
+    """Model to define follower-following relationships between users"""
     follower = models.ForeignKey(
-        Account,
+        User,
         related_name="following",
         on_delete=models.CASCADE
     )
     following = models.ForeignKey(
-        Account,
+        User,
         related_name="followers",
         on_delete=models.CASCADE
     )
@@ -132,7 +132,7 @@ class AccountRelationship(models.Model):
 
 class BaseProfile(models.Model):
     """Base Profile model with common fields"""
-    account = models.OneToOneField(Account, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     country = CountryField(blank=True, null=True)
     bio = models.TextField(blank=True, null=True, max_length=1000)
     avatar = models.URLField(blank=True, null=True)
@@ -154,34 +154,37 @@ class BaseProfile(models.Model):
         return self.time_zone or settings.TIME_ZONE
 
     def followers_count(self):
-        return self.account.followers.count()
+        return self.user.followers.count()
 
     def following_count(self):
-        return self.account.following.count()
+        return self.user.following.count()
 
 class RegularProfile(BaseProfile):
-    """Profile for regular accounts"""
+    """Profile for regular users"""
     pass
 
 class FootballerProfile(BaseProfile):
-    """Profile for footballer accounts"""
+    """Profile for footballer users"""
     position = models.CharField(max_length=100, blank=True, null=True)
     club = models.CharField(max_length=255, blank=True, null=True)
     national_team = models.CharField(max_length=255, blank=True, null=True)
 
 class ManagerProfile(BaseProfile):
-    """Profile for manager accounts"""
+    """Profile for manager users"""
     current_team = models.CharField(max_length=255, blank=True, null=True)
     coaching_style = models.CharField(max_length=255, blank=True, null=True)
 
 class OrganisationProfile(BaseProfile):
-    """Profile for organisation accounts"""
+    """Profile for organisation users"""
     organisation_name = models.CharField(max_length=255, blank=True, null=True)
     organisation_type = models.CharField(max_length=255, blank=True, null=True)
 
 class ProfileStatus(models.Model):
     """Statuses for user profiles"""
-    profile = models.ForeignKey(BaseProfile, on_delete=models.CASCADE)
+    regular_profile = models.ForeignKey(RegularProfile, on_delete=models.CASCADE, null=True, blank=True, related_name='statuses')
+    footballer_profile = models.ForeignKey(FootballerProfile, on_delete=models.CASCADE, null=True, blank=True, related_name='statuses')
+    manager_profile = models.ForeignKey(ManagerProfile, on_delete=models.CASCADE, null=True, blank=True, related_name='statuses')
+    organisation_profile = models.ForeignKey(OrganisationProfile, on_delete=models.CASCADE, null=True, blank=True, related_name='statuses')
     status = models.CharField(choices=(
         ('active', 'Active'),
         ('suspended', 'Suspended'),
@@ -199,3 +202,6 @@ class ProfileStatus(models.Model):
     def __str__(self):
         return self.status
 
+    @property
+    def profile(self):
+        return self.regular_profile or self.footballer_profile or self.manager_profile or self.organisation_profile

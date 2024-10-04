@@ -2,12 +2,12 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
 from .models import (
-    Account, AccountRelationship, RegularProfile, FootballerProfile,
+    User, UserRelationship, RegularProfile, FootballerProfile,
     ManagerProfile, OrganisationProfile, ProfileStatus
 )
 
-class AccountRelationshipInline(admin.TabularInline):
-    model = AccountRelationship
+class UserRelationshipInline(admin.TabularInline):
+    model = UserRelationship
     fk_name = 'follower'
     extra = 1
     verbose_name = _("Following")
@@ -17,36 +17,45 @@ class ProfileStatusInline(admin.TabularInline):
     model = ProfileStatus
     extra = 1
 
-@admin.register(Account)
-class AccountAdmin(UserAdmin):
-    list_display = ('username', 'email', 'firstname', 'lastname', 'account_type', 'is_verified', 'is_staff')
-    list_filter = ('account_type', 'is_verified', 'is_staff', 'is_superuser', 'is_active')
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj, **kwargs)
+        if obj:
+            formset.form.base_fields['regular_profile'].initial = obj if isinstance(obj, RegularProfile) else None
+            formset.form.base_fields['footballer_profile'].initial = obj if isinstance(obj, FootballerProfile) else None
+            formset.form.base_fields['manager_profile'].initial = obj if isinstance(obj, ManagerProfile) else None
+            formset.form.base_fields['organisation_profile'].initial = obj if isinstance(obj, OrganisationProfile) else None
+        return formset
+
+@admin.register(User)
+class UserAdmin(UserAdmin):
+    list_display = ('username', 'email', 'firstname', 'lastname', 'user_type', 'is_verified', 'is_staff')
+    list_filter = ('user_type', 'is_verified', 'is_staff', 'is_superuser', 'is_active')
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         (_('Personal info'), {'fields': ('firstname', 'lastname', 'email', 'phone_number')}),
-        (_('Account details'), {'fields': ('account_type', 'is_verified')}),
+        (_('User details'), {'fields': ('user_type', 'is_verified')}),
         (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('username', 'email', 'phone_number', 'password1', 'password2', 'account_type'),
+            'fields': ('username', 'email', 'phone_number', 'password1', 'password2', 'user_type'),
         }),
     )
     search_fields = ('username', 'firstname', 'lastname', 'email')
     ordering = ('username',)
-    inlines = [AccountRelationshipInline]
+    inlines = [UserRelationshipInline]
 
     def get_inlines(self, request, obj=None):
         if obj:
-            return [AccountRelationshipInline]
+            return [UserRelationshipInline]
         return []
 
 class BaseProfileAdmin(admin.ModelAdmin):
-    list_display = ('account', 'country', 'preferred_language', 'time_zone')
+    list_display = ('user', 'country', 'preferred_language', 'time_zone')
     list_filter = ('country', 'preferred_language', 'time_zone')
-    search_fields = ('account__username', 'account__email', 'bio')
+    search_fields = ('user__username', 'user__email', 'bio')
     readonly_fields = ('created_at', 'updated_at')
     inlines = [ProfileStatusInline]
 
@@ -72,8 +81,8 @@ class OrganisationProfileAdmin(BaseProfileAdmin):
     list_filter = BaseProfileAdmin.list_filter + ('organisation_type',)
     search_fields = BaseProfileAdmin.search_fields + ('organisation_name', 'organisation_type')
 
-@admin.register(AccountRelationship)
-class AccountRelationshipAdmin(admin.ModelAdmin):
+@admin.register(UserRelationship)
+class UserRelationshipAdmin(admin.ModelAdmin):
     list_display = ('follower', 'following', 'created_at')
     list_filter = ('created_at',)
     search_fields = ('follower__username', 'following__username')
@@ -81,13 +90,17 @@ class AccountRelationshipAdmin(admin.ModelAdmin):
 
 @admin.register(ProfileStatus)
 class ProfileStatusAdmin(admin.ModelAdmin):
-    list_display = ('profile', 'status', 'created_at', 'updated_at', 'reconsidered_at')
+    list_display = ('get_profile', 'status', 'created_at', 'updated_at', 'reconsidered_at')
     list_filter = ('status', 'created_at', 'updated_at', 'reconsidered_at')
-    search_fields = ('profile__account__username', 'reason')
+    search_fields = ('regular_profile__user__username', 'footballer_profile__user__username', 
+                     'manager_profile__user__username', 'organisation_profile__user__username', 'reason')
     date_hierarchy = 'created_at'
     readonly_fields = ('created_at', 'updated_at')
 
+    def get_profile(self, obj):
+        return obj.profile
+    get_profile.short_description = 'Profile'
+
 # Unregister the Group model from admin.
-# If you want to use it, you can comment out this line
 from django.contrib.auth.models import Group
 admin.site.unregister(Group)
